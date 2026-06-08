@@ -20,6 +20,7 @@
 ## SDK 版本策略
 
 - `agent/requirements.txt` 不锁定版本，CI/CD 每次安装 PyPI 上可解析的最新兼容版本。
+- CI 部署前执行 `python -m pip install -r agent/requirements.txt -t .python`，将运行依赖打包进 FC 自定义运行时代码包。
 - GitHub Actions 使用当前主版本 action：
   - `actions/checkout@v4`
   - `actions/setup-python@v5`

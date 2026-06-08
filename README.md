@@ -64,7 +64,7 @@ python -m py_compile agent/main.py
 
 ## 部署
 
-push 到 `main` 后，GitHub Actions 会执行语法检查，通过后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。部署地域已固定为华东 1（杭州）：`cn-hangzhou`。
+push 到 `main` 后，GitHub Actions 会执行语法检查，将 Python 运行依赖安装到 `.python/` 并随代码包部署，然后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。部署地域已固定为华东 1（杭州）：`cn-hangzhou`。
 
 Stream 模式依赖 WebSocket 长连接。`s.yaml` 已配置 `provisionConfig.defaultTarget=1` 和 `alwaysAllocateCPU=true`，部署后会持续保留 1 个实例并产生费用；不需要时请将 `defaultTarget` 改为 `0` 后重新部署。
 

@@ -33,6 +33,11 @@ jobs:
       - name: Syntax check
         run: python -m py_compile agent/main.py
 
+      - name: Build deployment dependencies
+        run: |
+          rm -rf .python
+          python -m pip install -r agent/requirements.txt -t .python
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
