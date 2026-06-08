@@ -4,16 +4,19 @@
 
 ```mermaid
 flowchart LR
-  dingGroup["钉钉群"] --> botCallback["机器人回调地址"]
-  botCallback --> fcApp["FC3 FastAPI服务"]
-  fcApp --> renderer["价格报表渲染"]
+  fcApp["FC3 FastAPI服务"] --> streamConn["钉钉Stream长连接"]
+  streamConn --> dingGroup["钉钉群"]
+  dingGroup --> streamConn
+  streamConn --> streamHandler["机器人消息处理器"]
+  streamHandler --> renderer["价格报表渲染"]
   renderer --> mockData["MOCK_PRICE_JSON"]
-  fcApp --> dingGroup
+  streamHandler --> streamConn
 ```
 
 ## 模块
 
-- `agent/main.py`：FastAPI 单入口，提供 `/health` 和 `/api/dingtalk/price-bot`。
+- `agent/main.py`：FastAPI 单入口，提供 `/health`，并在服务启动时启动钉钉 Stream 客户端。
+- `PriceBotStreamHandler`：处理钉钉机器人消息并回复 Markdown。
 - `MOCK_PRICE_JSON`：首版结构化假数据，后续可替换为数据库或真实价格源。
 - `render_price_markdown`：将结构化数据渲染为钉钉 Markdown。
 - `s.yaml`：FC3 自定义运行时部署配置。
@@ -23,17 +26,19 @@ flowchart LR
 
 - `PORT`：服务端口，FC3 使用 `9000`。
 - `BOT_TITLE`：Markdown 标题，默认“污水处理药剂价格早报”。
-- `DINGTALK_BOT_SECRET`：可选，启用钉钉加签校验时才需要。
-- `DINGTALK_ENABLE_SIGN_CHECK`：可选，是否启用签名校验，默认 `false`。
+- `DINGTALK_CLIENT_ID`：钉钉应用 Client ID，旧版应用通常是 AppKey。
+- `DINGTALK_CLIENT_SECRET`：钉钉应用 Client Secret，旧版应用通常是 AppSecret。
+- `DINGTALK_STREAM_ENABLED`：是否启动 Stream 长连接，FC 部署默认 `true`。
 
 FC3 部署地域固定为华东 1（杭州）：`cn-hangzhou`。
 
 ## 安全原则
 
-- 钉钉密钥、阿里云 AccessKey 只放在 FC 环境变量或 GitHub Actions Secrets。
+- 钉钉 Client Secret、阿里云 AccessKey 只放在 FC 环境变量或 GitHub Actions Secrets。
 - 不在代码、文档示例或前端中硬编码真实密钥。
 - GitHub Actions 使用 RAM 子账号 AccessKey，权限限制到目标 FC3 资源。
-- 签名校验开启后，服务会校验 `timestamp` 和 `sign`，并拒绝过期请求。
+- Stream 模式通过 SDK 建立鉴权长连接，不再暴露钉钉消息 HTTP 回调地址。
+- FC 需要至少一个常驻/预留实例保持长连接，否则空闲回收后机器人会离线。
 
 ## 扩展点
 

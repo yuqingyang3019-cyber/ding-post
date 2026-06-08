@@ -4,15 +4,13 @@ access: default
 
 vars:
   region: cn-hangzhou
-  serviceName: ${env(FC_SERVICE_NAME, "ding-post-service")}
-  functionName: ${env(FC_FUNCTION_NAME, "wastewater-price-bot")}
 
 resources:
   priceBot:
     component: fc3
     props:
       region: ${vars.region}
-      functionName: ${vars.functionName}
+      functionName: wastewater-price-bot
       description: DingTalk wastewater chemical price morning report bot
       runtime: custom.debian11
       code: .
@@ -29,12 +27,13 @@ resources:
       environmentVariables:
         PORT: "9000"
         BOT_TITLE: ${env(BOT_TITLE, "污水处理药剂价格早报")}
-        DINGTALK_BOT_SECRET: ${env(DINGTALK_BOT_SECRET, "")}
-        DINGTALK_ENABLE_SIGN_CHECK: ${env(DINGTALK_ENABLE_SIGN_CHECK, "false")}
+        DINGTALK_CLIENT_ID: ${env(DINGTALK_CLIENT_ID)}
+        DINGTALK_CLIENT_SECRET: ${env(DINGTALK_CLIENT_SECRET)}
+        DINGTALK_STREAM_ENABLED: "true"
       triggers:
         - triggerName: http-price-bot
           triggerType: http
-          description: DingTalk price bot HTTP callback
+          description: Health check and instance warm-up endpoint
           qualifier: LATEST
           triggerConfig:
             authType: anonymous

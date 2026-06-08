@@ -1,6 +1,6 @@
 # ding-post
 
-钉钉污水处理药剂价格早报机器人。服务部署在阿里云 FC3，接收钉钉机器人回调并返回 Markdown 价格报表。
+钉钉污水处理药剂价格早报机器人。服务部署在阿里云 FC3，通过钉钉 Stream 模式接收机器人消息并回复 Markdown 价格报表。
 
 ## 目录
 
@@ -23,20 +23,15 @@ s.yaml
 
 ## 接口
 
-- `GET /health`：健康检查，返回 `{"ok": true}`。
-- `POST /api/dingtalk/price-bot`：钉钉机器人回调，返回 Markdown。
+- `GET /health`：健康检查和 FC 实例唤醒，返回 `{"ok": true}`。
+- 机器人消息不走 HTTP 回调地址，改由钉钉 Stream 长连接接收。
 
-## 钉钉机器人配置
+## 钉钉 Stream 机器人配置
 
-1. 在钉钉群中添加自定义机器人或企业内部机器人。
-2. 首版联调可以先不启用加签；如果启用“加签”，保存生成的 `secret`。
-3. FC 部署完成后，将机器人回调地址配置为：
-
-```text
-https://你的FC域名/api/dingtalk/price-bot
-```
-
-4. 首次联调保持默认 `DINGTALK_ENABLE_SIGN_CHECK=false`，确认链路正常后再按需改为 `true`。
+1. 在钉钉开放平台创建或进入企业内部应用。
+2. 获取应用的 `Client ID` 和 `Client Secret`。旧版应用中通常对应 `AppKey` 和 `AppSecret`。
+3. 在应用的机器人能力或消息推送配置中，启用机器人并将消息接收模式选择为 `Stream 模式`。
+4. GitHub Actions 部署完成后，确保 FC 至少有一个常驻实例或被 `/health` 唤醒，否则 Stream 长连接不会持续存在。
 5. 在群里 @机器人或发送测试消息，预期返回“污水处理药剂价格早报” Markdown。
 
 ## 环境变量
@@ -45,22 +40,19 @@ https://你的FC域名/api/dingtalk/price-bot
 | --- | --- |
 | `PORT` | 服务端口，FC3 固定使用 `9000` |
 | `BOT_TITLE` | Markdown 标题，默认“污水处理药剂价格早报” |
-| `DINGTALK_BOT_SECRET` | 可选，启用钉钉加签校验时才需要 |
-| `DINGTALK_ENABLE_SIGN_CHECK` | 可选，默认 `false` |
+| `DINGTALK_CLIENT_ID` | 钉钉应用 Client ID，旧版应用通常是 AppKey |
+| `DINGTALK_CLIENT_SECRET` | 钉钉应用 Client Secret，旧版应用通常是 AppSecret |
+| `DINGTALK_STREAM_ENABLED` | 是否启动 Stream 长连接，FC 部署默认 `true` |
 
 ## GitHub Actions Secrets
 
-在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 只需要先配置这 3 个必填项：
+在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 配置这 5 个必填项：
 
 - `ALIBABA_CLOUD_ACCESS_KEY_ID`
 - `ALIBABA_CLOUD_ACCESS_KEY_SECRET`
 - `ALIBABA_CLOUD_ACCOUNT_ID`
-- `ALIBABA_CLOUD_REGION`
-
-如果后续要启用钉钉加签校验，再额外配置：
-
-- `DINGTALK_BOT_SECRET`
-- `DINGTALK_ENABLE_SIGN_CHECK=true`
+- `DINGTALK_CLIENT_ID`
+- `DINGTALK_CLIENT_SECRET`
 
 建议使用 RAM 子账号 AccessKey，并限制到目标 FC3 资源，不要使用主账号密钥。
 
@@ -79,3 +71,5 @@ python -m pytest agent/tests
 ## 部署
 
 push 到 `main` 后，GitHub Actions 会执行语法检查和最小测试，通过后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。部署地域已固定为华东 1（杭州）：`cn-hangzhou`。
+
+Stream 模式依赖 WebSocket 长连接。部署到 FC 时需要接受常驻实例带来的费用，并建议在 FC 控制台为函数配置至少 1 个常驻/预留实例，避免空闲回收后机器人离线。

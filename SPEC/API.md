@@ -2,7 +2,7 @@
 
 ## GET /health
 
-健康检查接口。
+健康检查和 FC 实例唤醒接口。
 
 ### 响应
 
@@ -12,22 +12,15 @@
 }
 ```
 
-## POST /api/dingtalk/price-bot
+## 钉钉 Stream 机器人消息
 
-钉钉机器人回调接口。首版只要求请求体是 JSON 对象，后续可根据消息内容扩展关键词处理。
+机器人消息不再通过 HTTP 回调地址进入服务。服务启动后使用 `dingtalk-stream` SDK 建立 WebSocket 长连接，注册机器人消息 topic，并在收到消息后回复 Markdown。
 
-### 请求示例
+### 触发方式
 
-```json
-{
-  "msgtype": "text",
-  "text": {
-    "content": "价格"
-  }
-}
-```
+在钉钉群中 @机器人或向机器人发送消息。
 
-### 响应示例
+### 回复内容
 
 ```json
 {
@@ -39,11 +32,9 @@
 }
 ```
 
-### 签名参数
+### 必要配置
 
-当 `DINGTALK_ENABLE_SIGN_CHECK=true` 时，请求需要携带：
+- `DINGTALK_CLIENT_ID`
+- `DINGTALK_CLIENT_SECRET`
 
-- `timestamp`：毫秒时间戳，可放在 query 参数或 `x-dingtalk-timestamp` 请求头。
-- `sign`：钉钉加签值，可放在 query 参数或 `x-dingtalk-sign` 请求头。
-
-签名使用 `timestamp + \"\\n\" + secret` 作为待签字符串，HMAC-SHA256 后 Base64 并 URL 编码。
+钉钉开放平台中需要将机器人消息接收模式配置为 `Stream 模式`。

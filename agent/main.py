@@ -1,21 +1,18 @@
-import base64
-import hashlib
-import hmac
+import logging
 import os
-import time
+import threading
 from typing import Any
-from urllib.parse import quote_plus, unquote_plus
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from dingtalk_stream import AckMessage
+import dingtalk_stream
+from fastapi import FastAPI
 
 
 BOT_TITLE = os.getenv("BOT_TITLE", "污水处理药剂价格早报")
-DINGTALK_BOT_SECRET = os.getenv("DINGTALK_BOT_SECRET", "")
-DINGTALK_ENABLE_SIGN_CHECK = (
-    os.getenv("DINGTALK_ENABLE_SIGN_CHECK", "false").lower() == "true"
-)
-SIGNATURE_MAX_AGE_SECONDS = 60 * 10
+DINGTALK_CLIENT_ID = os.getenv("DINGTALK_CLIENT_ID", "")
+DINGTALK_CLIENT_SECRET = os.getenv("DINGTALK_CLIENT_SECRET", "")
+DINGTALK_STREAM_ENABLED = os.getenv("DINGTALK_STREAM_ENABLED", "true").lower() == "true"
+_stream_thread_started = False
 
 MOCK_PRICE_JSON: dict[str, Any] = {
     "updatedAt": "2026-06-08 08:30",
@@ -75,7 +72,18 @@ MOCK_PRICE_JSON: dict[str, Any] = {
     },
 }
 
+logger = logging.getLogger("ding-post")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+)
+
 app = FastAPI(title="DingTalk Wastewater Price Bot")
+
+
+@app.on_event("startup")
+def startup() -> None:
+    start_stream_client_once()
 
 
 @app.get("/health")
@@ -83,64 +91,50 @@ def health() -> dict[str, bool]:
     return {"ok": True}
 
 
-@app.post("/api/dingtalk/price-bot")
-async def dingtalk_price_bot(request: Request) -> JSONResponse:
-    payload = await parse_json_payload(request)
-    if not isinstance(payload, dict):
-        raise HTTPException(status_code=400, detail="request body must be a JSON object")
-
-    if DINGTALK_ENABLE_SIGN_CHECK:
-        verify_dingtalk_signature(request)
-
-    return JSONResponse(build_markdown_response(MOCK_PRICE_JSON))
-
-
-async def parse_json_payload(request: Request) -> Any:
-    try:
-        return await request.json()
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail="invalid JSON request body") from exc
+class PriceBotStreamHandler(dingtalk_stream.ChatbotHandler):
+    async def process(
+        self, callback: dingtalk_stream.CallbackMessage
+    ) -> tuple[str, str]:
+        incoming_message = dingtalk_stream.ChatbotMessage.from_dict(callback.data)
+        self.reply_markdown(
+            BOT_TITLE,
+            render_price_markdown(MOCK_PRICE_JSON),
+            incoming_message,
+        )
+        return AckMessage.STATUS_OK, "OK"
 
 
-def verify_dingtalk_signature(request: Request) -> None:
-    if not DINGTALK_BOT_SECRET:
-        raise HTTPException(status_code=500, detail="DingTalk sign secret is not configured")
+def start_stream_client_once() -> None:
+    global _stream_thread_started
 
-    timestamp = request.query_params.get("timestamp") or request.headers.get(
-        "x-dingtalk-timestamp"
+    if not DINGTALK_STREAM_ENABLED:
+        logger.info("DingTalk Stream client is disabled")
+        return
+
+    if _stream_thread_started:
+        return
+
+    if not DINGTALK_CLIENT_ID or not DINGTALK_CLIENT_SECRET:
+        logger.warning("DingTalk Stream credentials are not configured")
+        return
+
+    thread = threading.Thread(target=run_stream_client, daemon=True)
+    thread.start()
+    _stream_thread_started = True
+
+
+def run_stream_client() -> None:
+    logger.info("Starting DingTalk Stream client")
+    credential = dingtalk_stream.Credential(
+        DINGTALK_CLIENT_ID,
+        DINGTALK_CLIENT_SECRET,
     )
-    sign = request.query_params.get("sign") or request.headers.get("x-dingtalk-sign")
-    if not timestamp or not sign:
-        raise HTTPException(status_code=401, detail="missing DingTalk signature")
-
-    try:
-        timestamp_ms = int(timestamp)
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail="invalid DingTalk timestamp") from exc
-
-    now_ms = int(time.time() * 1000)
-    if abs(now_ms - timestamp_ms) > SIGNATURE_MAX_AGE_SECONDS * 1000:
-        raise HTTPException(status_code=401, detail="expired DingTalk signature")
-
-    expected = build_dingtalk_sign(timestamp, DINGTALK_BOT_SECRET)
-    if not hmac.compare_digest(unquote_plus(sign), unquote_plus(expected)):
-        raise HTTPException(status_code=401, detail="invalid DingTalk signature")
-
-
-def build_dingtalk_sign(timestamp: str, secret: str) -> str:
-    string_to_sign = f"{timestamp}\n{secret}".encode("utf-8")
-    digest = hmac.new(secret.encode("utf-8"), string_to_sign, hashlib.sha256).digest()
-    return quote_plus(base64.b64encode(digest).decode("utf-8"))
-
-
-def build_markdown_response(data: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "msgtype": "markdown",
-        "markdown": {
-            "title": BOT_TITLE,
-            "text": render_price_markdown(data),
-        },
-    }
+    client = dingtalk_stream.DingTalkStreamClient(credential)
+    client.register_callback_handler(
+        dingtalk_stream.chatbot.ChatbotMessage.TOPIC,
+        PriceBotStreamHandler(),
+    )
+    client.start_forever()
 
 
 def render_price_markdown(data: dict[str, Any]) -> str:

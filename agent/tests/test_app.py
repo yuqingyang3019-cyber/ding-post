@@ -13,21 +13,12 @@ def test_health() -> None:
     assert response.json() == {"ok": True}
 
 
-def test_price_bot_returns_markdown() -> None:
-    response = client.post("/api/dingtalk/price-bot", json={"msgtype": "text"})
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["msgtype"] == "markdown"
-    assert body["markdown"]["title"] == "污水处理药剂价格早报"
-    assert "PAC" in body["markdown"]["text"]
-    assert "PAM" in body["markdown"]["text"]
-    assert "复合碳源" in body["markdown"]["text"]
-    assert "片碱" in body["markdown"]["text"]
-
-
 def test_render_price_markdown_includes_extras() -> None:
     text = render_price_markdown(MOCK_PRICE_JSON)
 
+    assert "PAC" in text
+    assert "PAM" in text
+    assert "复合碳源" in text
+    assert "片碱" in text
     assert "今日污泥处置参考价" in text
     assert "行业早报" in text
