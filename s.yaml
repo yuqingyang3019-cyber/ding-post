@@ -18,6 +18,9 @@ resources:
       memorySize: 512
       timeout: 30
       instanceConcurrency: 20
+      provisionConfig:
+        defaultTarget: 1
+        alwaysAllocateCPU: true
       customRuntimeConfig:
         command:
           - bash

@@ -31,13 +31,15 @@ flowchart LR
 
 FC3 部署地域固定为华东 1（杭州）：`cn-hangzhou`。
 
+FC3 通过 `provisionConfig.defaultTarget=1` 保留 1 个预留实例，并设置 `alwaysAllocateCPU=true` 维持 Stream 长连接；该配置会持续产生费用。
+
 ## 安全原则
 
 - 钉钉 Client Secret、阿里云 AccessKey 只放在 FC 环境变量或 GitHub Actions Secrets。
 - 不在代码、文档示例或前端中硬编码真实密钥。
 - GitHub Actions 使用 RAM 子账号 AccessKey，权限限制到目标 FC3 资源。
 - Stream 模式通过 SDK 建立鉴权长连接，不再暴露钉钉消息 HTTP 回调地址。
-- FC 需要至少一个常驻/预留实例保持长连接，否则空闲回收后机器人会离线。
+- FC 通过预留实例保持长连接，否则空闲回收后机器人会离线；不需要机器人在线时应将预留实例数改为 `0`。
 
 ## 扩展点
 
