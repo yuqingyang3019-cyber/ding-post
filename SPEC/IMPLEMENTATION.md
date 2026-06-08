@@ -29,5 +29,5 @@
 ## 验证策略
 
 - 本地不要求运行测试。
-- CI 不运行 pytest。
+- CI 不运行单元测试。
 - CI 仅执行 `python -m py_compile agent/main.py`，确保首版代码语法可编译。

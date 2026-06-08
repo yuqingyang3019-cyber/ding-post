@@ -29,9 +29,8 @@ resources:
         BOT_TITLE: ${env(BOT_TITLE, "污水处理药剂价格早报")}
         DINGTALK_CLIENT_ID: ${env(DINGTALK_CLIENT_ID)}
         DINGTALK_CLIENT_SECRET: ${env(DINGTALK_CLIENT_SECRET)}
-        DINGTALK_STREAM_ENABLED: "true"
       triggers:
-        - triggerName: http-price-bot
+        - triggerName: http-health
           triggerType: http
           description: Health check and instance warm-up endpoint
           qualifier: LATEST
@@ -39,4 +38,3 @@ resources:
             authType: anonymous
             methods:
               - GET
-              - POST

@@ -41,7 +41,6 @@ s.yaml
 | `BOT_TITLE` | Markdown 标题，默认“污水处理药剂价格早报” |
 | `DINGTALK_CLIENT_ID` | 钉钉应用 Client ID，旧版应用通常是 AppKey |
 | `DINGTALK_CLIENT_SECRET` | 钉钉应用 Client Secret，旧版应用通常是 AppSecret |
-| `DINGTALK_STREAM_ENABLED` | 是否启动 Stream 长连接，FC 部署默认 `true` |
 
 ## GitHub Actions Secrets
 

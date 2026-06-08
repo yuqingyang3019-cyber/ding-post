@@ -15,7 +15,6 @@ jobs:
       ALIBABA_CLOUD_ACCOUNT_ID: ${{ secrets.ALIBABA_CLOUD_ACCOUNT_ID }}
       DINGTALK_CLIENT_ID: ${{ secrets.DINGTALK_CLIENT_ID }}
       DINGTALK_CLIENT_SECRET: ${{ secrets.DINGTALK_CLIENT_SECRET }}
-      DINGTALK_STREAM_ENABLED: "false"
 
     steps:
       - name: Checkout

@@ -11,7 +11,6 @@ from fastapi import FastAPI
 BOT_TITLE = os.getenv("BOT_TITLE", "污水处理药剂价格早报")
 DINGTALK_CLIENT_ID = os.getenv("DINGTALK_CLIENT_ID", "")
 DINGTALK_CLIENT_SECRET = os.getenv("DINGTALK_CLIENT_SECRET", "")
-DINGTALK_STREAM_ENABLED = os.getenv("DINGTALK_STREAM_ENABLED", "true").lower() == "true"
 _stream_thread_started = False
 
 MOCK_PRICE_JSON: dict[str, Any] = {
@@ -106,10 +105,6 @@ class PriceBotStreamHandler(dingtalk_stream.ChatbotHandler):
 
 def start_stream_client_once() -> None:
     global _stream_thread_started
-
-    if not DINGTALK_STREAM_ENABLED:
-        logger.info("DingTalk Stream client is disabled")
-        return
 
     if _stream_thread_started:
         return
