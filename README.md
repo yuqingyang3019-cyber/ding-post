@@ -29,14 +29,14 @@ s.yaml
 ## 钉钉机器人配置
 
 1. 在钉钉群中添加自定义机器人或企业内部机器人。
-2. 安全设置建议选择“加签”，保存生成的 `secret`。
+2. 首版联调可以先不启用加签；如果启用“加签”，保存生成的 `secret`。
 3. FC 部署完成后，将机器人回调地址配置为：
 
 ```text
 https://你的FC域名/api/dingtalk/price-bot
 ```
 
-4. 首次联调建议 `DINGTALK_ENABLE_SIGN_CHECK=false`，确认链路正常后再改为 `true`。
+4. 首次联调保持默认 `DINGTALK_ENABLE_SIGN_CHECK=false`，确认链路正常后再按需改为 `true`。
 5. 在群里 @机器人或发送测试消息，预期返回“污水处理药剂价格早报” Markdown。
 
 ## 环境变量
@@ -45,24 +45,23 @@ https://你的FC域名/api/dingtalk/price-bot
 | --- | --- |
 | `PORT` | 服务端口，FC3 固定使用 `9000` |
 | `BOT_TITLE` | Markdown 标题，默认“污水处理药剂价格早报” |
-| `DINGTALK_BOT_SECRET` | 钉钉机器人加签密钥 |
-| `DINGTALK_ENABLE_SIGN_CHECK` | 是否启用签名校验，首版建议先设为 `false` |
+| `DINGTALK_BOT_SECRET` | 可选，启用钉钉加签校验时才需要 |
+| `DINGTALK_ENABLE_SIGN_CHECK` | 可选，默认 `false` |
 | `ALIBABA_CLOUD_REGION` | 阿里云 FC 地域，例如 `cn-hangzhou` |
-| `FC_SERVICE_NAME` | 可选，FC 服务名 |
-| `FC_FUNCTION_NAME` | 可选，FC 函数名 |
 
 ## GitHub Actions Secrets
 
-在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 配置：
+在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 只需要先配置这 4 个必填项：
 
 - `ALIBABA_CLOUD_ACCESS_KEY_ID`
 - `ALIBABA_CLOUD_ACCESS_KEY_SECRET`
 - `ALIBABA_CLOUD_ACCOUNT_ID`
 - `ALIBABA_CLOUD_REGION`
+
+如果后续要启用钉钉加签校验，再额外配置：
+
 - `DINGTALK_BOT_SECRET`
-- `DINGTALK_ENABLE_SIGN_CHECK`
-- `FC_SERVICE_NAME`，可选
-- `FC_FUNCTION_NAME`，可选
+- `DINGTALK_ENABLE_SIGN_CHECK=true`
 
 建议使用 RAM 子账号 AccessKey，并限制到目标 FC3 资源，不要使用主账号密钥。
 

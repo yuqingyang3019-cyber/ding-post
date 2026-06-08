@@ -15,9 +15,7 @@ jobs:
       ALIBABA_CLOUD_ACCOUNT_ID: ${{ secrets.ALIBABA_CLOUD_ACCOUNT_ID }}
       ALIBABA_CLOUD_REGION: ${{ secrets.ALIBABA_CLOUD_REGION }}
       DINGTALK_BOT_SECRET: ${{ secrets.DINGTALK_BOT_SECRET }}
-      DINGTALK_ENABLE_SIGN_CHECK: ${{ secrets.DINGTALK_ENABLE_SIGN_CHECK }}
-      FC_SERVICE_NAME: ${{ secrets.FC_SERVICE_NAME }}
-      FC_FUNCTION_NAME: ${{ secrets.FC_FUNCTION_NAME }}
+      DINGTALK_ENABLE_SIGN_CHECK: ${{ secrets.DINGTALK_ENABLE_SIGN_CHECK || 'false' }}
 
     steps:
       - name: Checkout

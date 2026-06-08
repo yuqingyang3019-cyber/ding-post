@@ -23,11 +23,9 @@ flowchart LR
 
 - `PORT`：服务端口，FC3 使用 `9000`。
 - `BOT_TITLE`：Markdown 标题，默认“污水处理药剂价格早报”。
-- `DINGTALK_BOT_SECRET`：钉钉机器人加签密钥。
-- `DINGTALK_ENABLE_SIGN_CHECK`：是否启用签名校验，首版联调建议先设为 `false`。
+- `DINGTALK_BOT_SECRET`：可选，启用钉钉加签校验时才需要。
+- `DINGTALK_ENABLE_SIGN_CHECK`：可选，是否启用签名校验，默认 `false`。
 - `ALIBABA_CLOUD_REGION`：FC3 地域，例如 `cn-hangzhou`。
-- `FC_SERVICE_NAME`：可选，FC 服务名。
-- `FC_FUNCTION_NAME`：可选，FC 函数名。
 
 ## 安全原则
 
