@@ -10,7 +10,7 @@
 
 ## 技术选型
 
-- Python 3.11。
+- Python 3.9，与 FC `custom.debian11` 自带 `python3` 运行环境保持一致。
 - FastAPI：提供最小 HTTP 健康检查服务。
 - `dingtalk-stream`：钉钉 Stream 模式官方 Python SDK，用于建立长连接、接收机器人消息、回复 Markdown。
 - Uvicorn：FC3 自定义运行时 ASGI 启动器。
@@ -19,8 +19,8 @@
 
 ## SDK 版本策略
 
-- `agent/requirements.txt` 不锁定版本，CI/CD 每次安装 PyPI 上可解析的最新兼容版本。
-- CI 部署前执行 `python -m pip install -r agent/requirements.txt -t .python`，将运行依赖打包进 FC 自定义运行时代码包。
+- `agent/requirements.txt` 不锁定版本，CI/CD 每次安装 Python 3.9 可解析的最新兼容版本。
+- CI 使用 Python 3.9 执行 `python -m pip install -r agent/requirements.txt -t .python`，将运行依赖打包进 FC 自定义运行时代码包。
 - GitHub Actions 使用当前主版本 action：
   - `actions/checkout@v4`
   - `actions/setup-python@v5`
