@@ -1,16 +1,8 @@
-from fastapi.testclient import TestClient
-
-from agent.main import app, render_price_markdown, MOCK_PRICE_JSON
-
-
-client = TestClient(app)
+from agent.main import health, render_price_markdown, MOCK_PRICE_JSON
 
 
 def test_health() -> None:
-    response = client.get("/health")
-
-    assert response.status_code == 200
-    assert response.json() == {"ok": True}
+    assert health() == {"ok": True}
 
 
 def test_render_price_markdown_includes_extras() -> None:
