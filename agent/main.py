@@ -97,10 +97,15 @@ def health() -> dict[str, Any]:
 
 
 class PriceBotStreamHandler(dingtalk_stream.ChatbotHandler):
+    def __init__(self, stream_logger: logging.Logger) -> None:
+        super().__init__()
+        self.logger = stream_logger
+
     async def process(
         self, callback: dingtalk_stream.CallbackMessage
     ) -> tuple[str, str]:
         incoming_message = dingtalk_stream.ChatbotMessage.from_dict(callback.data)
+        self.logger.info("Received DingTalk bot message")
         self.reply_markdown(
             BOT_TITLE,
             render_price_markdown(MOCK_PRICE_JSON),
@@ -133,10 +138,10 @@ def run_stream_client() -> None:
             DINGTALK_CLIENT_ID,
             DINGTALK_CLIENT_SECRET,
         )
-        client = dingtalk_stream.DingTalkStreamClient(credential)
+        client = dingtalk_stream.DingTalkStreamClient(credential, logger=logger)
         client.register_callback_handler(
             dingtalk_stream.chatbot.ChatbotMessage.TOPIC,
-            PriceBotStreamHandler(),
+            PriceBotStreamHandler(logger),
         )
         client.start_forever()
     except Exception as exc:
