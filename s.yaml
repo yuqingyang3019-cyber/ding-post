@@ -1,0 +1,43 @@
+edition: 3.0.0
+name: ding-post
+access: default
+
+vars:
+  region: ${env(ALIBABA_CLOUD_REGION)}
+  serviceName: ${env(FC_SERVICE_NAME, "ding-post-service")}
+  functionName: ${env(FC_FUNCTION_NAME, "wastewater-price-bot")}
+
+resources:
+  priceBot:
+    component: fc3
+    props:
+      region: ${vars.region}
+      functionName: ${vars.functionName}
+      description: DingTalk wastewater chemical price morning report bot
+      runtime: custom.debian11
+      code: .
+      handler: not-used
+      memorySize: 512
+      timeout: 30
+      instanceConcurrency: 20
+      customRuntimeConfig:
+        command:
+          - bash
+        args:
+          - agent/bootstrap.sh
+        port: 9000
+      environmentVariables:
+        PORT: "9000"
+        BOT_TITLE: ${env(BOT_TITLE, "污水处理药剂价格早报")}
+        DINGTALK_BOT_SECRET: ${env(DINGTALK_BOT_SECRET, "")}
+        DINGTALK_ENABLE_SIGN_CHECK: ${env(DINGTALK_ENABLE_SIGN_CHECK, "false")}
+      triggers:
+        - triggerName: http-price-bot
+          triggerType: http
+          description: DingTalk price bot HTTP callback
+          qualifier: LATEST
+          triggerConfig:
+            authType: anonymous
+            methods:
+              - GET
+              - POST
