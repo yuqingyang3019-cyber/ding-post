@@ -20,7 +20,7 @@ flowchart LR
 - `MOCK_PRICE_JSON`：首版结构化假数据，后续可替换为数据库或真实价格源。
 - `render_price_markdown`：将结构化数据渲染为钉钉 Markdown。
 - `s.yaml`：FC3 自定义运行时部署配置。
-- `.github/workflows/deploy.yml`：GitHub Actions CI/CD，push 后测试并部署。
+- `.github/workflows/deploy.yml`：GitHub Actions CI/CD，push 后语法检查并部署。
 
 ## 环境变量
 

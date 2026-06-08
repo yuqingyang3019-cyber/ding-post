@@ -9,12 +9,11 @@ agent/
   main.py
   bootstrap.sh
   requirements.txt
-  tests/
-    test_app.py
 SPEC/
   PRD.md
   ARCHITECTURE.md
   API.md
+  IMPLEMENTATION.md
 .github/
   workflows/
     deploy.yml
@@ -62,14 +61,10 @@ s.yaml
 python -m py_compile agent/main.py
 ```
 
-如果本地已经安装测试依赖，可运行：
-
-```bash
-python -m pytest agent/tests
-```
+当前仓库不保留测试用例，CI 只做语法检查和部署。
 
 ## 部署
 
-push 到 `main` 后，GitHub Actions 会执行语法检查和最小测试，通过后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。部署地域已固定为华东 1（杭州）：`cn-hangzhou`。
+push 到 `main` 后，GitHub Actions 会执行语法检查，通过后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。部署地域已固定为华东 1（杭州）：`cn-hangzhou`。
 
 Stream 模式依赖 WebSocket 长连接。部署到 FC 时需要接受常驻实例带来的费用，并建议在 FC 控制台为函数配置至少 1 个常驻/预留实例，避免空闲回收后机器人离线。
