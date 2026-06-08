@@ -47,7 +47,7 @@ jobs:
             --AccessKeyID "$ALIBABA_CLOUD_ACCESS_KEY_ID" \
             --AccessKeySecret "$ALIBABA_CLOUD_ACCESS_KEY_SECRET" \
             --AccountID "$ALIBABA_CLOUD_ACCOUNT_ID" \
-            --alias default
+            -a default
 
       - name: Deploy to FC3
         run: s deploy --use-local -y
