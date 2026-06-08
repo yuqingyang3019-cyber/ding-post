@@ -8,7 +8,10 @@
 
 ```json
 {
-  "ok": true
+  "ok": true,
+  "streamConfigured": true,
+  "streamStarted": true,
+  "streamLastError": ""
 }
 ```
 

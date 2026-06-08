@@ -12,6 +12,7 @@ BOT_TITLE = os.getenv("BOT_TITLE", "污水处理药剂价格早报")
 DINGTALK_CLIENT_ID = os.getenv("DINGTALK_CLIENT_ID", "")
 DINGTALK_CLIENT_SECRET = os.getenv("DINGTALK_CLIENT_SECRET", "")
 _stream_thread_started = False
+_stream_last_error = ""
 
 MOCK_PRICE_JSON: dict[str, Any] = {
     "updatedAt": "2026-06-08 08:30",
@@ -86,8 +87,13 @@ def startup() -> None:
 
 
 @app.get("/health")
-def health() -> dict[str, bool]:
-    return {"ok": True}
+def health() -> dict[str, Any]:
+    return {
+        "ok": True,
+        "streamConfigured": bool(DINGTALK_CLIENT_ID and DINGTALK_CLIENT_SECRET),
+        "streamStarted": _stream_thread_started,
+        "streamLastError": _stream_last_error,
+    }
 
 
 class PriceBotStreamHandler(dingtalk_stream.ChatbotHandler):
@@ -119,17 +125,23 @@ def start_stream_client_once() -> None:
 
 
 def run_stream_client() -> None:
+    global _stream_last_error
+
     logger.info("Starting DingTalk Stream client")
-    credential = dingtalk_stream.Credential(
-        DINGTALK_CLIENT_ID,
-        DINGTALK_CLIENT_SECRET,
-    )
-    client = dingtalk_stream.DingTalkStreamClient(credential)
-    client.register_callback_handler(
-        dingtalk_stream.chatbot.ChatbotMessage.TOPIC,
-        PriceBotStreamHandler(),
-    )
-    client.start_forever()
+    try:
+        credential = dingtalk_stream.Credential(
+            DINGTALK_CLIENT_ID,
+            DINGTALK_CLIENT_SECRET,
+        )
+        client = dingtalk_stream.DingTalkStreamClient(credential)
+        client.register_callback_handler(
+            dingtalk_stream.chatbot.ChatbotMessage.TOPIC,
+            PriceBotStreamHandler(),
+        )
+        client.start_forever()
+    except Exception as exc:
+        _stream_last_error = str(exc)
+        logger.exception("DingTalk Stream client stopped unexpectedly")
 
 
 def render_price_markdown(data: dict[str, Any]) -> str:

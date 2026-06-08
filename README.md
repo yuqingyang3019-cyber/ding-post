@@ -67,3 +67,13 @@ python -m py_compile agent/main.py
 push 到 `main` 后，GitHub Actions 会执行语法检查，通过后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。部署地域已固定为华东 1（杭州）：`cn-hangzhou`。
 
 Stream 模式依赖 WebSocket 长连接。部署到 FC 时需要接受常驻实例带来的费用，并建议在 FC 控制台为函数配置至少 1 个常驻/预留实例，避免空闲回收后机器人离线。
+
+## Stream 接入排查
+
+如果钉钉提示“Stream模式接入失败”，先访问 FC 的 `/health` 唤醒实例并查看响应：
+
+- `streamConfigured=false`：`DINGTALK_CLIENT_ID` 或 `DINGTALK_CLIENT_SECRET` 没有注入到 FC 环境变量。
+- `streamStarted=false`：实例还没启动 Stream 线程，检查 FC 启动日志。
+- `streamLastError` 非空：查看该错误和 FC 日志中的 `DingTalk Stream client stopped unexpectedly`。
+
+如果 `/health` 正常但钉钉仍验证失败，优先确认 FC 已配置至少 1 个常驻/预留实例，因为 Stream 模式需要服务端长连接持续在线。
