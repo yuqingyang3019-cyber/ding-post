@@ -25,7 +25,8 @@ flowchart LR
 - `BOT_TITLE`：Markdown 标题，默认“污水处理药剂价格早报”。
 - `DINGTALK_BOT_SECRET`：可选，启用钉钉加签校验时才需要。
 - `DINGTALK_ENABLE_SIGN_CHECK`：可选，是否启用签名校验，默认 `false`。
-- `ALIBABA_CLOUD_REGION`：FC3 地域，例如 `cn-hangzhou`。
+
+FC3 部署地域固定为华东 1（杭州）：`cn-hangzhou`。
 
 ## 安全原则
 

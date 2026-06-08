@@ -3,7 +3,7 @@ name: ding-post
 access: default
 
 vars:
-  region: ${env(ALIBABA_CLOUD_REGION)}
+  region: cn-hangzhou
   serviceName: ${env(FC_SERVICE_NAME, "ding-post-service")}
   functionName: ${env(FC_FUNCTION_NAME, "wastewater-price-bot")}
 

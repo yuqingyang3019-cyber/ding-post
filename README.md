@@ -47,11 +47,10 @@ https://你的FC域名/api/dingtalk/price-bot
 | `BOT_TITLE` | Markdown 标题，默认“污水处理药剂价格早报” |
 | `DINGTALK_BOT_SECRET` | 可选，启用钉钉加签校验时才需要 |
 | `DINGTALK_ENABLE_SIGN_CHECK` | 可选，默认 `false` |
-| `ALIBABA_CLOUD_REGION` | 阿里云 FC 地域，例如 `cn-hangzhou` |
 
 ## GitHub Actions Secrets
 
-在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 只需要先配置这 4 个必填项：
+在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 只需要先配置这 3 个必填项：
 
 - `ALIBABA_CLOUD_ACCESS_KEY_ID`
 - `ALIBABA_CLOUD_ACCESS_KEY_SECRET`
@@ -79,4 +78,4 @@ python -m pytest agent/tests
 
 ## 部署
 
-push 到 `main` 后，GitHub Actions 会执行语法检查和最小测试，通过后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。
+push 到 `main` 后，GitHub Actions 会执行语法检查和最小测试，通过后使用 Serverless Devs 基于 `s.yaml` 部署到 FC3。部署地域已固定为华东 1（杭州）：`cn-hangzhou`。
