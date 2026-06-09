@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import http.cookiejar
 import logging
+import os
+import random
 import re
 import time
 import urllib.error
@@ -19,9 +22,22 @@ BASE_URL = "https://www.100ppi.com/mprice/mlist-1--{page}.html"
 DEFAULT_PAGE_COUNT = 3
 REQUEST_TIMEOUT = 15
 PAGE_DELAY_SECONDS = 0.5
+CHALLENGE_RETRY_COUNT = 3
+CHALLENGE_RETRY_DELAY_SECONDS = (0.5, 0.9)
+CACHE_TTL_SECONDS = int(os.getenv("PRICE_CACHE_TTL_SECONDS", "900"))
 USER_AGENT = (
-    "Mozilla/5.0 (compatible; ding-post-bot/1.0; +https://github.com/ding-post)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
 )
+DEFAULT_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9",
+    "Referer": "https://www.100ppi.com/",
+}
+_cached_report: dict[str, Any] | None = None
+_cached_at = 0.0
 HW_CHECK_VALUE_RE = re.compile(r'var _0x2 = "([^"]+)"')
 CHALLENGE_MARKERS = ("HW_CHECK", "正在进行安全检查")
 PRICE_RE = re.compile(r"^([\d.]+)(元/.+)$")
@@ -118,31 +134,73 @@ def _is_challenge_page(html: str) -> bool:
     return any(marker in html for marker in CHALLENGE_MARKERS)
 
 
-def _fetch_page_html(page: int, cookie_value: str | None = None) -> str:
-    url = BASE_URL.format(page=page)
-    headers = {"User-Agent": USER_AGENT}
-    if cookie_value:
-        headers["Cookie"] = f"HW_CHECK={cookie_value}"
+class _QuoteFetcher:
+    def __init__(self) -> None:
+        self._cookie_jar = http.cookiejar.CookieJar()
+        handlers: list[Any] = [
+            urllib.request.HTTPCookieProcessor(self._cookie_jar),
+            urllib.request.HTTPHandler(),
+            urllib.request.HTTPSHandler(),
+        ]
+        proxy_url = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
+        if proxy_url:
+            handlers.append(urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url}))
+        self._opener = urllib.request.build_opener(*handlers)
 
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
-        return response.read().decode("utf-8", errors="replace")
+    def fetch(self, page: int) -> str:
+        url = BASE_URL.format(page=page)
+        last_error = "100ppi 安全检查未通过"
+
+        for attempt in range(1, CHALLENGE_RETRY_COUNT + 1):
+            request = urllib.request.Request(url, headers=DEFAULT_HEADERS)
+            with self._opener.open(request, timeout=REQUEST_TIMEOUT) as response:
+                html = response.read().decode("utf-8", errors="replace")
+
+            if not _is_challenge_page(html):
+                return html
+
+            cookie_value = _extract_hw_check_value(html)
+            if not cookie_value:
+                last_error = "100ppi 安全检查页面未返回 HW_CHECK cookie"
+                break
+
+            self._cookie_jar.set_cookie(
+                http.cookiejar.Cookie(
+                    version=0,
+                    name="HW_CHECK",
+                    value=cookie_value,
+                    port=None,
+                    port_specified=False,
+                    domain=".100ppi.com",
+                    domain_specified=True,
+                    domain_initial_dot=True,
+                    path="/",
+                    path_specified=True,
+                    secure=False,
+                    expires=None,
+                    discard=True,
+                    comment=None,
+                    comment_url=None,
+                    rest={},
+                    rfc2109=False,
+                )
+            )
+            delay = random.uniform(*CHALLENGE_RETRY_DELAY_SECONDS)
+            logger.info(
+                "100ppi security check triggered on page %s, retry %s/%s after %.2fs",
+                page,
+                attempt,
+                CHALLENGE_RETRY_COUNT,
+                delay,
+            )
+            time.sleep(delay)
+            last_error = "100ppi 安全检查未通过"
+
+        raise RuntimeError(last_error)
 
 
-def fetch_page_html(page: int) -> str:
-    html = _fetch_page_html(page)
-    if not _is_challenge_page(html):
-        return html
-
-    cookie_value = _extract_hw_check_value(html)
-    if not cookie_value:
-        raise RuntimeError("100ppi 安全检查页面未返回 HW_CHECK cookie")
-
-    time.sleep(0.3)
-    html = _fetch_page_html(page, cookie_value=cookie_value)
-    if _is_challenge_page(html):
-        raise RuntimeError("100ppi 安全检查未通过")
-    return html
+def fetch_page_html(page: int, fetcher: _QuoteFetcher) -> str:
+    return fetcher.fetch(page)
 
 
 def parse_quote_rows(html: str) -> list[dict[str, str]]:
@@ -197,12 +255,13 @@ def dedupe_quotes(quotes: list[dict[str, str]]) -> list[dict[str, str]]:
 
 def fetch_100ppi_quotes(page_count: int = DEFAULT_PAGE_COUNT) -> list[dict[str, str]]:
     all_quotes: list[dict[str, str]] = []
+    fetcher = _QuoteFetcher()
 
     for page in range(1, page_count + 1):
         if page > 1:
             time.sleep(PAGE_DELAY_SECONDS)
 
-        html = fetch_page_html(page)
+        html = fetch_page_html(page, fetcher)
         page_quotes = parse_quote_rows(html)
         if not page_quotes:
             raise RuntimeError(f"100ppi 第 {page} 页未解析到报价数据")
@@ -229,12 +288,22 @@ def build_live_price_report(quotes: list[dict[str, str]]) -> dict[str, Any]:
 
 
 def get_price_report(fallback_data: dict[str, Any], page_count: int = DEFAULT_PAGE_COUNT) -> dict[str, Any]:
+    global _cached_report, _cached_at
+
+    now = time.time()
+    if _cached_report and now - _cached_at < CACHE_TTL_SECONDS:
+        logger.info("Using cached 100ppi price report")
+        return _cached_report
+
     try:
         quotes = fetch_100ppi_quotes(page_count=page_count)
         if not quotes:
             raise RuntimeError("100ppi 未返回有效报价")
         logger.info("Loaded %s live quotes from 100ppi", len(quotes))
-        return build_live_price_report(quotes)
+        report = build_live_price_report(quotes)
+        _cached_report = report
+        _cached_at = now
+        return report
     except (RuntimeError, urllib.error.URLError, TimeoutError) as exc:
         reason = str(exc)
         logger.warning("Falling back to mock price data: %s", reason)
