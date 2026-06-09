@@ -9,4 +9,3 @@ venv/
 .serverless/
 .s/
 报价单.xlsx
-scripts/generate_quotation.py
