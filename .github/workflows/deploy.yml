@@ -31,7 +31,7 @@ jobs:
           pip install -r agent/requirements.txt
 
       - name: Syntax check
-        run: python -m py_compile agent/main.py
+        run: python -m py_compile agent/main.py agent/price_sources.py
 
       - name: Build deployment dependencies
         run: |

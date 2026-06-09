@@ -7,6 +7,8 @@ from dingtalk_stream import AckMessage
 import dingtalk_stream
 from fastapi import FastAPI
 
+from price_sources import get_price_report
+
 
 BOT_TITLE = os.getenv("BOT_TITLE", "污水处理药剂价格早报")
 DINGTALK_CLIENT_ID = os.getenv("DINGTALK_CLIENT_ID", "")
@@ -106,9 +108,10 @@ class PriceBotStreamHandler(dingtalk_stream.ChatbotHandler):
     ) -> tuple[str, str]:
         incoming_message = dingtalk_stream.ChatbotMessage.from_dict(callback.data)
         self.logger.info("Received DingTalk bot message")
+        price_data = get_price_report(MOCK_PRICE_JSON)
         self.reply_markdown(
             BOT_TITLE,
-            render_price_markdown(MOCK_PRICE_JSON),
+            render_price_markdown(price_data),
             incoming_message,
         )
         return AckMessage.STATUS_OK, "OK"
@@ -149,37 +152,77 @@ def run_stream_client() -> None:
         logger.exception("DingTalk Stream client stopped unexpectedly")
 
 
+def _escape_markdown_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ")
+
+
 def render_price_markdown(data: dict[str, Any]) -> str:
     lines = [
         f"### {BOT_TITLE}",
         "",
         f"> 更新时间：{data.get('updatedAt', '待更新')}",
-        "",
-        "| 品类 | 规格 | 价格 | 走势 |",
-        "| --- | --- | --- | --- |",
     ]
 
-    for item in data.get("items", []):
-        price = f"{item['price']} {item['unit']}"
-        trend = f"{item['trend']}（{item['change']}）"
-        lines.append(f"| {item['alias']} | {item['spec']} | {price} | {trend} |")
+    if data.get("isFallback"):
+        reason = data.get("fallbackReason", "未知原因")
+        lines.append(f"> 当前为缓存假数据，原因：{reason}，请以实际询价为准")
+    else:
+        lines.append("> 数据来源：生意社公开报价，公开页面抓取")
 
-    lines.extend(["", "#### 备注"])
-    for item in data.get("items", []):
-        lines.append(f"- {item['alias']}：{item['notes']}")
+    if data.get("isFallback"):
+        lines.extend(
+            [
+                "",
+                "| 品类 | 规格 | 价格 | 走势 |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for item in data.get("items", []):
+            price = f"{item['price']} {item['unit']}"
+            trend = f"{item['trend']}（{item['change']}）"
+            lines.append(
+                f"| {_escape_markdown_cell(item['alias'])} | "
+                f"{_escape_markdown_cell(item['spec'])} | "
+                f"{_escape_markdown_cell(price)} | "
+                f"{_escape_markdown_cell(trend)} |"
+            )
 
-    extras = data.get("extras", {})
-    sludge = extras.get("sludgeDisposalPrice", {})
+        lines.extend(["", "#### 备注"])
+        for item in data.get("items", []):
+            lines.append(f"- {item['alias']}：{item['notes']}")
+
+        extras = data.get("extras", {})
+        sludge = extras.get("sludgeDisposalPrice", {})
+        lines.extend(
+            [
+                "",
+                f"#### {sludge.get('title', '今日污泥处置参考价')}",
+                f"- {sludge.get('value', '待更新')}：{sludge.get('notes', '暂无说明')}",
+                "",
+                "#### 行业早报",
+            ]
+        )
+        for brief in extras.get("morningBrief", []):
+            lines.append(f"- {brief}")
+        return "\n".join(lines)
+
     lines.extend(
         [
             "",
-            f"#### {sludge.get('title', '今日污泥处置参考价')}",
-            f"- {sludge.get('value', '待更新')}：{sludge.get('notes', '暂无说明')}",
-            "",
-            "#### 行业早报",
+            "| 商品名称 | 规格 | 品牌/产地 | 报价 | 报价类型 | 交货地 | 发布时间 |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
-    for brief in extras.get("morningBrief", []):
-        lines.append(f"- {brief}")
+    for item in data.get("items", []):
+        price = f"{item['price']}{item['unit']}" if item.get("unit") else item["price"]
+        lines.append(
+            f"| {_escape_markdown_cell(item.get('name', ''))} | "
+            f"{_escape_markdown_cell(item.get('spec', ''))} | "
+            f"{_escape_markdown_cell(item.get('brand', ''))} | "
+            f"{_escape_markdown_cell(price)} | "
+            f"{_escape_markdown_cell(item.get('quoteType', ''))} | "
+            f"{_escape_markdown_cell(item.get('delivery', ''))} | "
+            f"{_escape_markdown_cell(item.get('publishedAt', ''))} |"
+        )
 
     return "\n".join(lines)

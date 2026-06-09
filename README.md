@@ -7,6 +7,7 @@
 ```text
 agent/
   main.py
+  price_sources.py
   bootstrap.sh
   requirements.txt
 SPEC/
@@ -33,6 +34,17 @@ s.yaml
 4. GitHub Actions 部署完成后，FC 会按 `s.yaml` 保持 1 个预留实例，用于维持 Stream 长连接。
 5. 在群里 @机器人或发送测试消息，预期返回“污水处理药剂价格早报” Markdown。
 
+## 价格数据来源
+
+机器人收到消息时，会优先从生意社公开报价页抓取前 3 页数据并展示全部公开报价。抓取失败、解析为空或页面结构异常时，会回退到代码内缓存的 `MOCK_PRICE_JSON`，并在 Markdown 顶部明确提示“当前为缓存假数据”。
+
+手工抓取排查：
+
+```bash
+cd agent
+python price_sources.py --pages 3 --output 100ppi_prices.csv
+```
+
 ## 环境变量
 
 | 变量 | 说明 |
@@ -57,7 +69,7 @@ s.yaml
 ## 轻量验证
 
 ```bash
-python -m py_compile agent/main.py
+python -m py_compile agent/main.py agent/price_sources.py
 ```
 
 当前仓库不保留测试用例，CI 只做语法检查和部署。
