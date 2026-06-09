@@ -209,8 +209,8 @@ def render_price_markdown(data: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "| 商品名称 | 规格 | 品牌/产地 | 报价 | 报价类型 | 交货地 | 发布时间 |",
-            "| --- | --- | --- | --- | --- | --- | --- |",
+            "| 名称 | 规格 | 报价 | 报价类型 |",
+            "| --- | --- | --- | --- |",
         ]
     )
     for item in data.get("items", []):
@@ -218,11 +218,8 @@ def render_price_markdown(data: dict[str, Any]) -> str:
         lines.append(
             f"| {_escape_markdown_cell(item.get('name', ''))} | "
             f"{_escape_markdown_cell(item.get('spec', ''))} | "
-            f"{_escape_markdown_cell(item.get('brand', ''))} | "
             f"{_escape_markdown_cell(price)} | "
-            f"{_escape_markdown_cell(item.get('quoteType', ''))} | "
-            f"{_escape_markdown_cell(item.get('delivery', ''))} | "
-            f"{_escape_markdown_cell(item.get('publishedAt', ''))} |"
+            f"{_escape_markdown_cell(item.get('quoteType', ''))} |"
         )
 
     return "\n".join(lines)
